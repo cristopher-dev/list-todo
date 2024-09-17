@@ -1,56 +1,63 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TasksController } from './tasks.controller';
-import { TasksService } from './service/tasks.service';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { TasksService } from './tasks.service';
+import { Task } from '../entity/task.entity';
+import { Repository } from 'typeorm';
 
-describe('TasksController', () => {
-  let controller: TasksController;
+describe('TasksService', () => {
   let service: TasksService;
+  let repo: Repository<Task>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [TasksController],
       providers: [
+        TasksService,
         {
-          provide: TasksService,
+          provide: getRepositoryToken(Task),
           useValue: {
-            create: jest.fn(),
-            findAll: jest.fn(),
+            save: jest.fn(),
+            find: jest.fn(),
             update: jest.fn(),
-            remove: jest.fn(),
+            delete: jest.fn(),
+            findOne: jest.fn(),
           },
         },
       ],
     }).compile();
 
-    controller = module.get<TasksController>(TasksController);
     service = module.get<TasksService>(TasksService);
+    repo = module.get<Repository<Task>>(getRepositoryToken(Task));
   });
 
   it('should be defined', () => {
-    expect(controller).toBeDefined();
+    expect(service).toBeDefined();
   });
 
   describe('create', () => {
     it('should create a task', async () => {
       const task = {
-        id: 1,
         title: 'Test task',
         description: 'Test description',
         status: 'in-progress' as 'pending' | 'in-progress' | 'completed',
       };
       const savedTask = { id: 1, ...task };
-      jest.spyOn(service, 'create').mockResolvedValue(savedTask);
-      expect(await controller.create(task)).toEqual(savedTask);
+      jest.spyOn(repo, 'save').mockResolvedValue(savedTask);
+      expect(await service.create(task)).toEqual(savedTask);
     });
   });
 
   describe('findAll', () => {
     it('should return an array of tasks', async () => {
       const tasks = [
-        { id: 1, title: 'Test task', description: 'Test description' },
+        {
+          id: 1,
+          title: 'Test task',
+          description: 'Test description',
+          status: 'in-progress' as 'pending' | 'in-progress' | 'completed',
+        },
       ];
-      jest.spyOn(service, 'findAll').mockResolvedValue(tasks);
-      expect(await controller.findAll()).toEqual(tasks);
+      jest.spyOn(repo, 'find').mockResolvedValue(tasks);
+      expect(await service.findAll()).toEqual(tasks);
     });
   });
 
@@ -64,18 +71,17 @@ describe('TasksController', () => {
         status: 'in-progress' as 'pending' | 'in-progress' | 'completed',
       };
       const updatedTask = { id, ...task };
-      jest.spyOn(service, 'update').mockResolvedValue(updatedTask);
-      expect(await controller.update(id, task)).toEqual(updatedTask);
+      jest.spyOn(repo, 'update').mockResolvedValue(undefined);
+      jest.spyOn(repo, 'findOne').mockResolvedValue(updatedTask);
+      expect(await service.update(id, task)).toEqual(updatedTask);
     });
   });
 
   describe('remove', () => {
     it('should remove a task', async () => {
       const id = 1;
-      jest
-        .spyOn(service, 'remove')
-        .mockResolvedValue({ message: 'Task removed successfully' });
-      expect(await controller.remove(id)).toEqual({
+      jest.spyOn(repo, 'delete').mockResolvedValue(undefined);
+      expect(await service.remove(id)).toEqual({
         message: 'Task removed successfully',
       });
     });
